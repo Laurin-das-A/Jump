@@ -11,7 +11,6 @@ import GameplayKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
-    var cameraIsMovingFirst = false
     
     let player = SKShapeNode(circleOfRadius: 16)
     let terrain = SKShapeNode(rectOf: CGSize(width: 300, height: 30 ))
@@ -32,6 +31,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var score = 0
     
     var camera1: SKCameraNode? = SKCameraNode()
+    var followPlayer = false
+    
+//    let background = SKNode(fileNamed: "Background")
+    var background: SKNode = SKNode()
     
     class Bitmasks {
         static var playerBitmask: UInt32 = 0b1
@@ -40,31 +43,60 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     override func didMove(to view: SKView) {
-        
-        cameraIsMovingFirst = true
+    
+        background = self.children [0]
         
         let SceneHight = frame.height * 3
         
         backgroundColor = .gray
         physicsWorld.contactDelegate = self
         
+        scene?.addChild(camera1!)
         scene?.camera = camera1
         
+        setPlayer()
+        setKorb(sceneHight: SceneHight)
+        createLevel()
+        setBorder(sceneHight: SceneHight)
+        
+        cameraStartMove()
         
         
+    }
+    
+    func cameraStartMove() {
+        let moveToKorb = SKAction.move(to: korb.position, duration: 2.5)
+        moveToKorb.timingMode = .easeInEaseOut
+        
+        let moveToPlayer = SKAction.move(to: player.position, duration: 2.5)
+        moveToPlayer.timingMode = .easeInEaseOut
+
+        
+        camera1?.run(SKAction.sequence([moveToKorb,.wait(forDuration: 0.5), moveToPlayer]))
+        
+        _ = Timer.scheduledTimer(withTimeInterval: 5.5, repeats: false)  { timer in
+            self.followPlayer = true
+            self.player.physicsBody?.affectedByGravity = true
+        }
+    }
+    
+    func setPlayer() {
         player.strokeColor = .black
         player.fillColor = .black
         player.physicsBody = SKPhysicsBody(circleOfRadius: 16)
-        player.physicsBody?.affectedByGravity = true
+        player.physicsBody?.affectedByGravity = false
         player.physicsBody?.isDynamic = true
-        player.position = .init(x: 0, y: 600)
+        player.position = .init(x: 0, y: 500)
         player.physicsBody?.categoryBitMask = Bitmasks.playerBitmask
         player.physicsBody?.collisionBitMask = Bitmasks.terrainBitmask
         player.physicsBody?.contactTestBitMask = Bitmasks.korbBitmask
         
         addChild(player)
         
-        korb.position = CGPoint(x: 0, y: SceneHight - 500)
+    }
+    
+    func setKorb(sceneHight: CGFloat) {
+        korb.position = CGPoint(x: 0, y: sceneHight - 500)
         korb.setScale(0.5)
         korb.physicsBody = SKPhysicsBody(texture: korbTexture, size: korb.size)
         korb.physicsBody?.affectedByGravity = false
@@ -72,36 +104,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         korb.physicsBody?.categoryBitMask = Bitmasks.korbBitmask
         
         addChild(korb)
-        
-        addTerrain(x: 0 , y: 0)
-        
-        addTerrain(x: 300, y: 600)
-        addTerrain(x: -300, y: 600)
-        
-        addTerrain(x: 0 , y: 900)
-        
-        addTerrain(x: 300, y: 1200)
-        addTerrain(x: -300, y: 1200)
-        
-        addTerrain(x: 0 , y: 1500)
-        
-        addTerrain(x: 300, y: 1800)
-        addTerrain(x: -300, y: 2100)
-        
-        addTerrain(x: 0 , y: 2400)
-        
-        addTerrain(x: 300, y: 2700)
-        addTerrain(x: -300, y: 2700)
-        
-        addTerrain(x: 0 , y: 3000)
-        
-        addTerrain(x: 300, y: 3300)
-        addTerrain(x: -300, y: 3300)
-        
-        
-        
-        bottomBorder.fillColor = .black
-        
+    }
+    
+    func setBorder(sceneHight: CGFloat) {
         
         bottomBorder.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: frame.width, height: 1))
         bottomBorder.physicsBody?.affectedByGravity = false
@@ -114,12 +119,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         topBorder.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: frame.width, height: 1))
         topBorder.physicsBody?.affectedByGravity = false
         topBorder.physicsBody?.isDynamic = false
-        topBorder.position = .init(x: 0, y: SceneHight)
+        topBorder.position = .init(x: 0, y: sceneHight)
         topBorder.physicsBody?.categoryBitMask = Bitmasks.terrainBitmask
         
         addChild(topBorder)
         
-        leftBorder.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 1, height: SceneHight * 2))
+        leftBorder.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 1, height: sceneHight * 2))
         leftBorder.physicsBody?.affectedByGravity = false
         leftBorder.physicsBody?.isDynamic = false
         leftBorder.position = .init(x: ( -frame.width / 2) + 60, y: 0)
@@ -127,14 +132,36 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         addChild(leftBorder)
         
-        rightBorder.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 1, height: SceneHight * 2))
+        rightBorder.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 1, height: sceneHight * 2))
         rightBorder.physicsBody?.affectedByGravity = false
         rightBorder.physicsBody?.isDynamic = false
         rightBorder.position = .init(x: (frame.width / 2) - 60, y: 0)
         rightBorder.physicsBody?.categoryBitMask = Bitmasks.terrainBitmask
         
         addChild(rightBorder)
+    }
+    func createLevel() {
+        addTerrain(x: 0 , y: 0)
         
+        addTerrain(x: 300, y: 600)
+        addTerrain(x: -300, y: 900)
+        
+        addTerrain(x: 0 , y: 1200)
+        
+        addTerrain(x: 300, y: 1500)
+        addTerrain(x: -300, y: 1800)
+        
+        addTerrain(x: 0 , y: 2100)
+        
+        addTerrain(x: 300, y: 2400)
+        addTerrain(x: -300, y: 2700)
+        
+        addTerrain(x: 0 , y: 3000)
+        
+        addTerrain(x: 300, y: 3300)
+        addTerrain(x: -300, y: 3300)
+        
+        addTerrain(x: 0 , y: 3700)
         
     }
     
@@ -152,8 +179,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         
         if contactA.categoryBitMask == Bitmasks.playerBitmask && contactB.categoryBitMask == Bitmasks.korbBitmask {
+            
             player.removeFromParent()
-            print("weg")
+            
+            let scaleAkct = SKAction.scale(to: 2, duration: 0.5)
+            scaleAkct.timingMode = .easeInEaseOut
+            
+            let unscaleAkct = SKAction.scale(to: 0, duration: 0.5)
+            unscaleAkct.timingMode = .easeInEaseOut
+            
+            korb.run(SKAction.sequence([scaleAkct, unscaleAkct]))
+            
+            
         }
                     
     }
@@ -194,14 +231,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
             endTouch = touch.location(in: self )
         }
-        player.physicsBody?.applyImpulse(CGVector(dx: endTouch.x - startTouch.x, dy: endTouch.y - startTouch.y ))
-        
+        if followPlayer {
+            player.physicsBody?.applyImpulse(CGVector(dx: (endTouch.x - startTouch.x) * 0.5, dy: (endTouch.y - startTouch.y) * 0.5))
+        }
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -211,9 +250,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     override func update(_ currentTime: TimeInterval) {
         // Called before each frame is rendered
         
+        background.position.y = camera1!.position.y / -5
         
-        if player.position.y > -15 && player.position.y < frame.height * 2.5  - 15{
+        if player.position.y > -15 && player.position.y < frame.height * 2.5  - 15 && followPlayer
+        {
             camera1?.position.y = player.position.y
+            
         }
     }
 }
