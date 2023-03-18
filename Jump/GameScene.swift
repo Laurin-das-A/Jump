@@ -11,19 +11,22 @@ import GameplayKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
+    static let levelNames = ["Level1", "Level2", "End"]
+    var level = 0
     
     let player = SKShapeNode(circleOfRadius: 16)
     let terrain = SKShapeNode(rectOf: CGSize(width: 300, height: 30 ))
-    let korb = SKSpriteNode(imageNamed: "Korb")
+    var korb: SKSpriteNode?
     let korbTexture = SKTexture(imageNamed: "Korb")
-   
+
     var ränderBreite = 10
-    
+    var sceneHightmultiply: Double = 5
     
     var bottomBorder = SKShapeNode()
     var topBorder = SKShapeNode()
     var rightBorder = SKShapeNode()
     var leftBorder = SKShapeNode()
+
     
     var startTouch = CGPoint()
     var endTouch = CGPoint()
@@ -33,20 +36,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var camera1: SKCameraNode? = SKCameraNode()
     var followPlayer = false
     
-//    let background = SKNode(fileNamed: "Background")
     var background: SKNode = SKNode()
     
     class Bitmasks {
-        static var playerBitmask: UInt32 = 0b1
-        static var korbBitmask: UInt32 = 0b10
-        static var terrainBitmask: UInt32 = 0b100
+        static let playerBitmask: UInt32 = 0b1
+        static let korbBitmask: UInt32 = 0b10
+        static let terrainBitmask: UInt32 = 0b100
     }
     
     override func didMove(to view: SKView) {
-    
-        background = self.children [0]
+        restartLevel()
+        self.background = (self.scene!.childNode(withName: "Level")?.childNode(withName: "Background")!)!
         
-        let SceneHight = frame.height * 3
+        
         
         backgroundColor = .gray
         physicsWorld.contactDelegate = self
@@ -54,29 +56,80 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         scene?.addChild(camera1!)
         scene?.camera = camera1
         
-        setPlayer()
-        setKorb(sceneHight: SceneHight)
-        createLevel()
-        setBorder(sceneHight: SceneHight)
-        
-        cameraStartMove()
         
         
     }
+    func restartLevel() {
+        let SceneHight = frame.height * sceneHightmultiply
+        
+        
+        if level < GameScene.levelNames.count {
+            
+            loadLevel(GameScene.levelNames[level])
+        }
+        if level < GameScene.levelNames.count - 1 {
+            
+            
+            let scheissKorb = self.scene!.childNode(withName: "Level")?.childNode(withName: "Korb") as? SKSpriteNode
+            korb = SKSpriteNode(imageNamed: "Korb")
+            korb?.position = scheissKorb!.position
+            self.scene!.childNode(withName: "Level")?.addChild(korb!)
+            scheissKorb?.removeFromParent()
+            korb?.physicsBody = SKPhysicsBody(texture: korbTexture, size: korb!.size)
+            korb?.physicsBody!.affectedByGravity = false
+            korb?.physicsBody!.isDynamic = false
+            korb?.physicsBody!.categoryBitMask = Bitmasks.korbBitmask
+            
+            setBorder(sceneHight: SceneHight)
+            
+            setPlayer()
+
+            
+            cameraStartMove()
+            
+        } else {
+            camera1?.position = CGPoint(x: 0, y: 0)
+            scene?.backgroundColor  = .black
+            followPlayer = false
+            player.removeFromParent()
+            
+            let feuerwerk1 = SKEmitterNode(fileNamed: "Feuerwerk1")
+            
+            let moveUp1 = SKAction.move(to: CGPoint(x: 10, y: 100), duration: 1)
+             //let moveUp2 = SKAction.move(to: CGPoint(x: EM2.position.x, y: 500), duration: 1)
+            feuerwerk1?.position = CGPoint(x: 300, y: -frame.height/2)
+            addChild(feuerwerk1!)
+            feuerwerk1?.run(moveUp1)
+            
+            let feuerwerk2 = SKEmitterNode(fileNamed: "Feuerwerk2")
+            
+            feuerwerk2!.position = CGPoint(x: -300 , y: -frame.height/2)
+            let moveUp2 = SKAction.move(to: CGPoint(x: -10, y: 100), duration: 1)
+            addChild(feuerwerk2!)
+            feuerwerk2!.run(moveUp2)
+            
+            
+        }
+    }
+    
     
     func cameraStartMove() {
-        let moveToKorb = SKAction.move(to: korb.position, duration: 2.5)
+        self.followPlayer = false
+        
+        let moveToKorb = SKAction.move(to: CGPoint(x: 0, y: korb!.position.y) , duration: 2.5)
         moveToKorb.timingMode = .easeInEaseOut
         
-        let moveToPlayer = SKAction.move(to: player.position, duration: 2.5)
+        let moveToPlayer = SKAction.move(to: CGPoint(x: 0, y: player.position.y) , duration: 2.5)
         moveToPlayer.timingMode = .easeInEaseOut
 
+        camera1?.position = player.position
         
         camera1?.run(SKAction.sequence([moveToKorb,.wait(forDuration: 0.5), moveToPlayer]))
         
         _ = Timer.scheduledTimer(withTimeInterval: 5.5, repeats: false)  { timer in
             self.followPlayer = true
             self.player.physicsBody?.affectedByGravity = true
+            self.player.physicsBody?.isDynamic = true
         }
     }
     
@@ -85,25 +138,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         player.fillColor = .black
         player.physicsBody = SKPhysicsBody(circleOfRadius: 16)
         player.physicsBody?.affectedByGravity = false
-        player.physicsBody?.isDynamic = true
+        player.physicsBody?.isDynamic = false
         player.position = .init(x: 0, y: 500)
         player.physicsBody?.categoryBitMask = Bitmasks.playerBitmask
         player.physicsBody?.collisionBitMask = Bitmasks.terrainBitmask
         player.physicsBody?.contactTestBitMask = Bitmasks.korbBitmask
+        player.zPosition = 10
         
         addChild(player)
         
-    }
-    
-    func setKorb(sceneHight: CGFloat) {
-        korb.position = CGPoint(x: 0, y: sceneHight - 500)
-        korb.setScale(0.5)
-        korb.physicsBody = SKPhysicsBody(texture: korbTexture, size: korb.size)
-        korb.physicsBody?.affectedByGravity = false
-        korb.physicsBody?.isDynamic = false
-        korb.physicsBody?.categoryBitMask = Bitmasks.korbBitmask
-        
-        addChild(korb)
     }
     
     func setBorder(sceneHight: CGFloat) {
@@ -140,29 +183,46 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         addChild(rightBorder)
     }
-    func createLevel() {
-        addTerrain(x: 0 , y: 0)
+    
+    func loadLevel(_ name: String)
+    {
+        let levelScene = SKScene(fileNamed: name)
+        let levelNode = SKNode()
+        levelNode.name = "Level"
         
-        addTerrain(x: 300, y: 600)
-        addTerrain(x: -300, y: 900)
-        
-        addTerrain(x: 0 , y: 1200)
-        
-        addTerrain(x: 300, y: 1500)
-        addTerrain(x: -300, y: 1800)
-        
-        addTerrain(x: 0 , y: 2100)
-        
-        addTerrain(x: 300, y: 2400)
-        addTerrain(x: -300, y: 2700)
-        
-        addTerrain(x: 0 , y: 3000)
-        
-        addTerrain(x: 300, y: 3300)
-        addTerrain(x: -300, y: 3300)
-        
-        addTerrain(x: 0 , y: 3700)
-        
+        for node in levelScene!.children {
+            if node.name != "TileMap" {
+                node.removeFromParent()
+                levelNode.addChild(node)
+            }
+        }
+
+        if let tileMap: SKTileMapNode = levelScene!.childNode(withName: "TileMap") as? SKTileMapNode {
+            let tileSize = tileMap.tileSize
+            let x0: CGFloat = tileMap.position.x - tileMap.mapSize.width / 2
+            let y0: CGFloat = tileMap.position.y - tileMap.mapSize.height / 2
+            
+            for row in 0..<tileMap.numberOfRows {
+                for col in 0..<tileMap.numberOfColumns {
+                    if let tileDef = tileMap.tileDefinition(atColumn: col, row: row) {
+                        let textureArray = tileDef.textures
+                        let tileTexture = textureArray[0]
+                        let x: CGFloat = x0 + CGFloat(col) * tileSize.width + tileTexture.size().width/2
+                        let y: CGFloat = y0 + CGFloat(row) * tileSize.height + tileTexture.size().height/2
+                        let tileNode = SKSpriteNode(texture: tileTexture, size: tileTexture.size())
+                        tileNode.position = CGPoint(x: x, y: y)
+                        
+                        tileNode.physicsBody = SKPhysicsBody(rectangleOf: tileSize)
+                        tileNode.physicsBody!.affectedByGravity = false
+                        tileNode.physicsBody!.isDynamic = false
+                        tileNode.physicsBody!.categoryBitMask = Bitmasks.terrainBitmask
+                        
+                        levelNode.addChild(tileNode)
+                    }
+                }
+            }
+        }
+        self.scene!.addChild(levelNode)
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
@@ -180,6 +240,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         if contactA.categoryBitMask == Bitmasks.playerBitmask && contactB.categoryBitMask == Bitmasks.korbBitmask {
             
+            print("Kollision mit Korb")
+           
             player.removeFromParent()
             
             let scaleAkct = SKAction.scale(to: 2, duration: 0.5)
@@ -188,26 +250,33 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             let unscaleAkct = SKAction.scale(to: 0, duration: 0.5)
             unscaleAkct.timingMode = .easeInEaseOut
             
-            korb.run(SKAction.sequence([scaleAkct, unscaleAkct]))
+            
+            korb!.run(SKAction.sequence([scaleAkct, unscaleAkct]))
             
             
+            let _ = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { timer in
+                self.scene!.childNode(withName: "Level")!.removeFromParent()
+                
+                
+                
+                self.topBorder.removeFromParent()
+                self.bottomBorder.removeFromParent()
+                self.leftBorder.removeFromParent()
+                self.rightBorder.removeFromParent()
+                
+                if self.level < GameScene.levelNames.count - 1 {
+                    self.level += 1
+                }
+                
+                self.restartLevel()
+            }
+            
+           
         }
                     
     }
     
-    func addTerrain(x: CGFloat, y: CGFloat) {
-        let terrain = SKShapeNode(rectOf: CGSize(width: 300, height: 30 ))
-
-        terrain.strokeColor = .brown
-        terrain.fillColor = .brown
-        terrain.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 300, height: 30  ))
-        terrain.physicsBody?.affectedByGravity = false
-        terrain.physicsBody?.isDynamic = false
-        terrain.position = .init(x: x, y: y)
-        terrain.physicsBody?.categoryBitMask = Bitmasks.terrainBitmask
-        
-        addChild(terrain)
-    }
+    
     
     
     
@@ -252,7 +321,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         background.position.y = camera1!.position.y / -5
         
-        if player.position.y > -15 && player.position.y < frame.height * 2.5  - 15 && followPlayer
+        if player.position.y > -15 && player.position.y < frame.height * sceneHightmultiply - 0.5  - 15 && followPlayer
+            
         {
             camera1?.position.y = player.position.y
             
