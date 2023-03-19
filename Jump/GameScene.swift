@@ -12,13 +12,14 @@ import GameplayKit
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
     static let levelNames = ["Level1", "Level2", "End"]
-    var level = 0
+    var level = 1
     
     let player = SKShapeNode(circleOfRadius: 16)
     let terrain = SKShapeNode(rectOf: CGSize(width: 300, height: 30 ))
     var korb: SKSpriteNode?
     let korbTexture = SKTexture(imageNamed: "Korb")
 
+    
     var ränderBreite = 10
     var sceneHightmultiply: Double = 5
     
@@ -31,6 +32,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var startTouch = CGPoint()
     var endTouch = CGPoint()
     
+    var scoreLabel: SKLabelNode?
     var score = 0
     
     var camera1: SKCameraNode? = SKCameraNode()
@@ -42,9 +44,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         static let playerBitmask: UInt32 = 0b1
         static let korbBitmask: UInt32 = 0b10
         static let terrainBitmask: UInt32 = 0b100
+        static let münzeBitmask: UInt32 = 0b1000
+        static let BoosterL: UInt32 = 0b10000
+        static let BoosterR: UInt32 = 0b100000
+        static let BoosterD: UInt32 = 0b1000000
+        static let BoosterU: UInt32 = 0b10000000
+        static let allBoosters: UInt32 = BoosterL | BoosterR | BoosterU | BoosterD
     }
     
     override func didMove(to view: SKView) {
+        
+        createScoreLabel()
+        
         restartLevel()
         self.background = (self.scene!.childNode(withName: "Level")?.childNode(withName: "Background")!)!
         
@@ -142,7 +153,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         player.position = .init(x: 0, y: 500)
         player.physicsBody?.categoryBitMask = Bitmasks.playerBitmask
         player.physicsBody?.collisionBitMask = Bitmasks.terrainBitmask
-        player.physicsBody?.contactTestBitMask = Bitmasks.korbBitmask
+        player.physicsBody?.contactTestBitMask = Bitmasks.korbBitmask | Bitmasks.münzeBitmask | Bitmasks.allBoosters
         player.zPosition = 10
         
         addChild(player)
@@ -212,10 +223,40 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                         let tileNode = SKSpriteNode(texture: tileTexture, size: tileTexture.size())
                         tileNode.position = CGPoint(x: x, y: y)
                         
-                        tileNode.physicsBody = SKPhysicsBody(rectangleOf: tileSize)
+                        tileNode.physicsBody = SKPhysicsBody(rectangleOf: tileTexture.size())
                         tileNode.physicsBody!.affectedByGravity = false
                         tileNode.physicsBody!.isDynamic = false
-                        tileNode.physicsBody!.categoryBitMask = Bitmasks.terrainBitmask
+
+                        switch tileDef.name {
+                            
+                        case "Münze":
+                            tileNode.physicsBody?.categoryBitMask = Bitmasks.münzeBitmask
+                            tileNode.run(.repeatForever(.sequence([.scaleX(to: 0.1, duration: 1), .scaleX(to: 1, duration: 1)])))
+                        case "BoosterL":
+                            tileNode.physicsBody?.categoryBitMask = Bitmasks.BoosterL
+                            tileNode.run(.repeatForever(.sequence([.move(by: CGVector(dx: -10, dy: 0), duration: 0.5),
+                                                                   .move(by: CGVector(dx: 10, dy: 0), duration: 0.5) ])))
+                        case "BoosterR":
+                            tileNode.physicsBody?.categoryBitMask = Bitmasks.BoosterR
+                            tileNode.run(.repeatForever(.sequence([.move(by: CGVector(dx: 10, dy: 0), duration: 0.5),
+                                                                   .move(by: CGVector(dx: -10, dy: 0), duration: 0.5) ])))
+                        case "BoosterU":
+                            tileNode.physicsBody?.categoryBitMask = Bitmasks.BoosterU
+                            tileNode.run(.repeatForever(.sequence([.move(by: CGVector(dx: 0, dy: 10), duration: 0.5),
+                                                                   .move(by: CGVector(dx: 0, dy: -10), duration: 0.5) ])))
+                        case "BoosterD":
+                            tileNode.physicsBody?.categoryBitMask = Bitmasks.BoosterD
+                            tileNode.run(.repeatForever(.sequence([.move(by: CGVector(dx: 0, dy: -10), duration: 0.5),
+                                                                   .move(by: CGVector(dx: 0, dy: 10), duration: 0.5) ])))
+
+                        default:
+                            tileNode.physicsBody!.categoryBitMask = Bitmasks.terrainBitmask
+
+                        }
+                        
+                        
+                        
+                        
                         
                         levelNode.addChild(tileNode)
                     }
@@ -232,53 +273,87 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if contact.bodyA.categoryBitMask < contact.bodyB.categoryBitMask {
             contactA = contact.bodyA
             contactB = contact.bodyB
-
+            
         } else {
             contactA = contact.bodyB
             contactB = contact.bodyA
         }
         
-        if contactA.categoryBitMask == Bitmasks.playerBitmask && contactB.categoryBitMask == Bitmasks.korbBitmask {
+        if contactA.categoryBitMask == Bitmasks.playerBitmask {
+            let boosterStärke: Double = 10
             
-            print("Kollision mit Korb")
-           
-            player.removeFromParent()
-            
-            let scaleAkct = SKAction.scale(to: 2, duration: 0.5)
-            scaleAkct.timingMode = .easeInEaseOut
-            
-            let unscaleAkct = SKAction.scale(to: 0, duration: 0.5)
-            unscaleAkct.timingMode = .easeInEaseOut
-            
-            
-            korb!.run(SKAction.sequence([scaleAkct, unscaleAkct]))
-            
-            
-            let _ = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { timer in
-                self.scene!.childNode(withName: "Level")!.removeFromParent()
+            switch contactB.categoryBitMask {
                 
+            case Bitmasks.korbBitmask:
                 
+                korb!.physicsBody!.categoryBitMask = 0
+                print("Kollision mit Korb")
                 
-                self.topBorder.removeFromParent()
-                self.bottomBorder.removeFromParent()
-                self.leftBorder.removeFromParent()
-                self.rightBorder.removeFromParent()
+                player.removeFromParent()
                 
-                if self.level < GameScene.levelNames.count - 1 {
-                    self.level += 1
+                let scaleAkct = SKAction.scale(to: 2, duration: 0.5)
+                scaleAkct.timingMode = .easeInEaseOut
+                
+                let unscaleAkct = SKAction.scale(to: 0, duration: 0.5)
+                unscaleAkct.timingMode = .easeInEaseOut
+                
+                korb!.run(SKAction.sequence([scaleAkct, unscaleAkct]))
+                
+                let _ = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { timer in
+                    self.scene!.childNode(withName: "Level")!.removeFromParent()
+                    self.topBorder.removeFromParent()
+                    self.bottomBorder.removeFromParent()
+                    self.leftBorder.removeFromParent()
+                    self.rightBorder.removeFromParent()
+                    
+                    if self.level < GameScene.levelNames.count - 1 {
+                        print("Level erhöhen")
+                        self.level += 1
+                    }
+                    
+                    self.restartLevel()
                 }
                 
-                self.restartLevel()
+            case Bitmasks.münzeBitmask:
+                let removeAction = SKAction.run() {
+                    contactB.node!.removeFromParent()
+                    self.score += 1
+                }
+                contactB.node!.run(.sequence([.move(to: scoreLabel!.position, duration: 0.5), removeAction]))
+                
+                
+            case Bitmasks.BoosterL:
+                player.physicsBody?.applyImpulse(CGVector(dx: -boosterStärke, dy: 0))
+                
+            case Bitmasks.BoosterR:
+                player.physicsBody?.applyImpulse(CGVector(dx: boosterStärke, dy: 0))
+                
+            case Bitmasks.BoosterD:
+                player.physicsBody?.applyImpulse(CGVector(dx: 0, dy: -boosterStärke))
+                
+            case Bitmasks.BoosterU:
+                player.physicsBody?.applyImpulse(CGVector(dx: 0, dy: boosterStärke))
+                
+            default:
+                print("Bestimmt war's wieder der Scheisskorb")
             }
-            
-           
         }
-                    
+    }
+            
+    func createScoreLabel() {
+        scoreLabel = SKLabelNode(text: String(score))
+        scoreLabel!.fontName = "Arial Black"
+        scoreLabel!.color = .black
+        scoreLabel!.fontSize = 100
+        scoreLabel!.zPosition = 200
+        addChild(scoreLabel!)
     }
     
-    
-    
-    
+    func updateScoreLabel() {
+        scoreLabel?.text = String(score)
+        scoreLabel!.position = CGPoint(x: camera1!.position.x - 200, y: camera1!.position.y + 500)
+
+    }
     
     func touchDown(atPoint pos : CGPoint) {
         
@@ -319,6 +394,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     override func update(_ currentTime: TimeInterval) {
         // Called before each frame is rendered
         
+        
         background.position.y = camera1!.position.y / -5
         
         if player.position.y > -15 && player.position.y < frame.height * sceneHightmultiply - 0.5  - 15 && followPlayer
@@ -327,5 +403,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             camera1?.position.y = player.position.y
             
         }
+        updateScoreLabel()
     }
 }
