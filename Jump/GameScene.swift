@@ -427,7 +427,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
     func createScoreLabel() {
         scoreLabel = SKLabelNode(text: String(score))
-        scoreLabel!.fontName = "Arial"
+        scoreLabel!.fontName = "arial"
         scoreLabel!.color = .black
         scoreLabel!.fontSize = 100
         scoreLabel!.zPosition = 200
