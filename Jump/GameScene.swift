@@ -11,8 +11,8 @@ import GameplayKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
-    static let levelNames = ["Level1", "Level2", "End"]
-    var level = 1
+    static let levelNames = ["Level1", "Level2", "Level3", "End"]
+    var level = 2
     
     let player = SKShapeNode(circleOfRadius: 16)
     let terrain = SKShapeNode(rectOf: CGSize(width: 300, height: 30 ))
@@ -40,6 +40,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var background: SKNode = SKNode()
     
+    var invisible: SKSpriteNode?
+    var invisibleUplayer = false
+    
     class Bitmasks {
         static let playerBitmask: UInt32 = 0b1
         static let korbBitmask: UInt32 = 0b10
@@ -50,6 +53,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         static let BoosterD: UInt32 = 0b1000000
         static let BoosterU: UInt32 = 0b10000000
         static let allBoosters: UInt32 = BoosterL | BoosterR | BoosterU | BoosterD
+        static let oneWayPlatform: UInt32 = 0b100000000
     }
     
     override func didMove(to view: SKView) {
@@ -73,7 +77,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func restartLevel() {
         let SceneHight = frame.height * sceneHightmultiply
         
-        
+        print(level)
+        print(GameScene.levelNames.count)
         if level < GameScene.levelNames.count {
             
             loadLevel(GameScene.levelNames[level])
@@ -82,6 +87,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             
             let scheissKorb = self.scene!.childNode(withName: "Level")?.childNode(withName: "Korb") as? SKSpriteNode
+            
             korb = SKSpriteNode(imageNamed: "Korb")
             korb?.position = scheissKorb!.position
             self.scene!.childNode(withName: "Level")?.addChild(korb!)
@@ -90,6 +96,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             korb?.physicsBody!.affectedByGravity = false
             korb?.physicsBody!.isDynamic = false
             korb?.physicsBody!.categoryBitMask = Bitmasks.korbBitmask
+            
+            
             
             setBorder(sceneHight: SceneHight)
             
@@ -124,6 +132,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     
+    
     func cameraStartMove() {
         self.followPlayer = false
         
@@ -153,7 +162,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         player.position = .init(x: 0, y: 500)
         player.physicsBody?.categoryBitMask = Bitmasks.playerBitmask
         player.physicsBody?.collisionBitMask = Bitmasks.terrainBitmask
-        player.physicsBody?.contactTestBitMask = Bitmasks.korbBitmask | Bitmasks.münzeBitmask | Bitmasks.allBoosters
+        player.physicsBody?.contactTestBitMask = Bitmasks.korbBitmask | Bitmasks.münzeBitmask | Bitmasks.allBoosters | Bitmasks.oneWayPlatform
         player.zPosition = 10
         
         addChild(player)
@@ -231,7 +240,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                             
                         case "Münze":
                             tileNode.physicsBody?.categoryBitMask = Bitmasks.münzeBitmask
-                            tileNode.run(.repeatForever(.sequence([.scaleX(to: 0.1, duration: 1), .scaleX(to: 1, duration: 1)])))
+                            tileNode.run(.repeatForever(.sequence([.scaleX(to: 0.2, duration: 1), .scaleX(to: 1, duration: 1)])))
                         case "BoosterL":
                             tileNode.physicsBody?.categoryBitMask = Bitmasks.BoosterL
                             tileNode.run(.repeatForever(.sequence([.move(by: CGVector(dx: -10, dy: 0), duration: 0.5),
@@ -248,22 +257,55 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                             tileNode.physicsBody?.categoryBitMask = Bitmasks.BoosterD
                             tileNode.run(.repeatForever(.sequence([.move(by: CGVector(dx: 0, dy: -10), duration: 0.5),
                                                                    .move(by: CGVector(dx: 0, dy: 10), duration: 0.5) ])))
-
+                            
+                        case "MovingPlatform":
+                            tileNode.physicsBody?.categoryBitMask = Bitmasks.oneWayPlatform
+                            
+                            // Berechnung, damit nicht alle gleich schnell laufen
+                            
+                            let entfenung: Double = Double(500 - tileNode.position.x)
+                            
+                            
+                            
+                            tileNode.run(.sequence([.move(to: CGPoint(x: 500, y: tileNode.position.y), duration: entfenung / 1000.0),.repeatForever(.sequence([.move(to: CGPoint(x: -500, y: tileNode.position.y), duration: 2),.move(to: CGPoint(x: 500, y: tileNode.position.y), duration: 2)]))]))
+                            
+                            
                         default:
                             tileNode.physicsBody!.categoryBitMask = Bitmasks.terrainBitmask
 
                         }
                         
-                        
-                        
-                        
-                        
                         levelNode.addChild(tileNode)
+                        
+                        // Speziel effekte
+                        switch level {
+                        case 0...2-1:
+                            self.physicsWorld.gravity = CGVector(dx: 0, dy: -20)
+                        case 3 - 1:
+                            self.physicsWorld.gravity = CGVector(dx: 0, dy: -25)
+                        default:
+                            break
+                        }
                     }
                 }
             }
         }
         self.scene!.addChild(levelNode)
+    }
+    
+    
+    func addInvisible(_ pos: CGPoint, PhysicsBody: SKPhysicsBody) {
+        invisible?.removeFromParent()
+        invisible?.removeFromParent()
+        invisible = SKSpriteNode()
+        invisible?.physicsBody = PhysicsBody
+        invisible?.physicsBody!.affectedByGravity = false
+        invisible?.physicsBody!.isDynamic = false
+        invisible?.physicsBody!.categoryBitMask = Bitmasks.terrainBitmask
+        invisible?.position = pos
+        
+        addChild(invisible!)
+        
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
@@ -334,15 +376,58 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             case Bitmasks.BoosterU:
                 player.physicsBody?.applyImpulse(CGVector(dx: 0, dy: boosterStärke))
                 
+            case Bitmasks.oneWayPlatform:
+                if player.position.y > contactB.node!.position.y {
+                    print("abblbocken")
+                    invisibleUplayer = true
+                    addInvisible(contactB.node!.position, PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 1000, height: 1)))
+                    
+                }
+                print(invisibleUplayer)
             default:
                 print("Bestimmt war's wieder der Scheisskorb")
+            }
+        }
+    }
+    
+    
+    
+    func didEnd(_ contact: SKPhysicsContact) {
+        var contactA: SKPhysicsBody
+        var contactB: SKPhysicsBody
+        
+        if contact.bodyA.categoryBitMask < contact.bodyB.categoryBitMask {
+            contactA = contact.bodyA
+            contactB = contact.bodyB
+            
+        } else {
+            contactA = contact.bodyB
+            contactB = contact.bodyA
+        }
+        
+        if contactA.categoryBitMask == Bitmasks.playerBitmask {
+            
+            switch contactB.categoryBitMask{
+                
+            case Bitmasks.oneWayPlatform:
+                
+                if player.position.y > contactB.node!.position.y  {
+                    print("invisible entfernen")
+                    if invisibleUplayer == true {
+                        invisible?.removeFromParent()
+                        invisibleUplayer = false
+                    }
+                }
+                
+            default:
+                return
             }
         }
     }
             
     func createScoreLabel() {
         scoreLabel = SKLabelNode(text: String(score))
-        scoreLabel!.fontName = "Arial Black"
+        scoreLabel!.fontName = "Arial"
         scoreLabel!.color = .black
         scoreLabel!.fontSize = 100
         scoreLabel!.zPosition = 200
@@ -393,7 +478,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     override func update(_ currentTime: TimeInterval) {
         // Called before each frame is rendered
-        
+        /*if invisibleUplayer {
+            invisible?.position.x = player.position.y
+        }*/
         
         background.position.y = camera1!.position.y / -5
         
