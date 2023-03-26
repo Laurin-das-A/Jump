@@ -12,7 +12,7 @@ import GameplayKit
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
     static let levelNames = ["Level1", "Level2", "Level3", "End"]
-    var level = 2
+    var level = 0
     
     let player = SKShapeNode(circleOfRadius: 16)
     let terrain = SKShapeNode(rectOf: CGSize(width: 300, height: 30 ))
@@ -42,6 +42,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var invisible: SKSpriteNode?
     var invisibleUplayer = false
+    var allInvisible: [SKNode] = []
+    
     
     class Bitmasks {
         static let playerBitmask: UInt32 = 0b1
@@ -268,18 +270,26 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                             
                             
                             tileNode.run(.sequence([.move(to: CGPoint(x: 500, y: tileNode.position.y), duration: entfenung / 1000.0),.repeatForever(.sequence([.move(to: CGPoint(x: -500, y: tileNode.position.y), duration: 2),.move(to: CGPoint(x: 500, y: tileNode.position.y), duration: 2)]))]))
+                          
+                        case "OneWayPlatform":
+                            tileNode.physicsBody?.categoryBitMask = Bitmasks.oneWayPlatform
                             
-                            
+                            //tileNode.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: tileTexture.size().width + 100, height: tileTexture.size().height + 100))
+                            /*tileNode.physicsBody?.isDynamic = false
+                            tileNode.physicsBody?.affectedByGravity = false
+                            tileNode.physicsBody?.collisionBitMask = 0
+                            tileNode.physicsBody?.contactTestBitMask  = 0
+                            */
                         default:
                             tileNode.physicsBody!.categoryBitMask = Bitmasks.terrainBitmask
-
+                            
                         }
                         
                         levelNode.addChild(tileNode)
                         
                         // Speziel effekte
                         switch level {
-                        case 0...2-1:
+                        case 0...2 - 1:
                             self.physicsWorld.gravity = CGVector(dx: 0, dy: -20)
                         case 3 - 1:
                             self.physicsWorld.gravity = CGVector(dx: 0, dy: -25)
@@ -295,8 +305,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     
     func addInvisible(_ pos: CGPoint, PhysicsBody: SKPhysicsBody) {
-        invisible?.removeFromParent()
-        invisible?.removeFromParent()
+        
         invisible = SKSpriteNode()
         invisible?.physicsBody = PhysicsBody
         invisible?.physicsBody!.affectedByGravity = false
@@ -305,6 +314,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         invisible?.position = pos
         
         addChild(invisible!)
+        allInvisible.append(invisible!)
         
     }
     
@@ -377,12 +387,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 player.physicsBody?.applyImpulse(CGVector(dx: 0, dy: boosterStärke))
                 
             case Bitmasks.oneWayPlatform:
-                if player.position.y > contactB.node!.position.y {
+                if player.position.y > contactB.node!.position.y  - 1 {
                     print("abblbocken")
                     invisibleUplayer = true
-                    addInvisible(contactB.node!.position, PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 1000, height: 1)))
+                    player.physicsBody?.affectedByGravity = false
+                    //addInvisible(CGPoint(x: contactB.node!.position.x, y: contactB.node!.position.y - 10), PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 200, height: 20)))
+                    addInvisible(contactB.node!.position, PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 90, height: 10)))
                     
+                    player.physicsBody?.affectedByGravity = true
+                    
+
+                } else {
+                    for i in self.allInvisible { i.removeFromParent() }
                 }
+                
                 print(invisibleUplayer)
             default:
                 print("Bestimmt war's wieder der Scheisskorb")
@@ -413,8 +431,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 
                 if player.position.y > contactB.node!.position.y  {
                     print("invisible entfernen")
+                    
+                    let _ = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { timer in
+                        if !self.invisibleUplayer {
+                            self.allInvisible[self.allInvisible.count - 1].removeFromParent()
+                        }
+                    }
                     if invisibleUplayer == true {
-                        invisible?.removeFromParent()
+                        for i in self.allInvisible {
+                            let _ = Timer.scheduledTimer(withTimeInterval: 1, repeats: false) { timer in
+                                i.removeFromParent()
+                            }
+                        }
                         invisibleUplayer = false
                     }
                 }
