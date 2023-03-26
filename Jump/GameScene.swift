@@ -65,16 +65,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         restartLevel()
         self.background = (self.scene!.childNode(withName: "Level")?.childNode(withName: "Background")!)!
         
-        
-        
         backgroundColor = .gray
         physicsWorld.contactDelegate = self
         
         scene?.addChild(camera1!)
         scene?.camera = camera1
-        
-        
-        
+
     }
     func restartLevel() {
         let SceneHight = frame.height * sceneHightmultiply
@@ -99,13 +95,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             korb?.physicsBody!.isDynamic = false
             korb?.physicsBody!.categoryBitMask = Bitmasks.korbBitmask
             
-            
-            
+
             setBorder(sceneHight: SceneHight)
             
             setPlayer()
 
-            
             cameraStartMove()
             
         } else {
@@ -234,10 +228,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                         let tileNode = SKSpriteNode(texture: tileTexture, size: tileTexture.size())
                         tileNode.position = CGPoint(x: x, y: y)
                         
-                        tileNode.physicsBody = SKPhysicsBody(rectangleOf: tileTexture.size())
-                        tileNode.physicsBody!.affectedByGravity = false
-                        tileNode.physicsBody!.isDynamic = false
+                        
 
+                        switch tileDef.name {
+                        case "OneWayPlatform":
+                            tileNode.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: tileTexture.size().width , height: tileTexture.size().height + 300))
+                            tileNode.physicsBody!.affectedByGravity = false
+                            tileNode.physicsBody!.isDynamic = false
+                        default:
+                            tileNode.physicsBody = SKPhysicsBody(rectangleOf: tileTexture.size())
+                            tileNode.physicsBody!.affectedByGravity = false
+                            tileNode.physicsBody!.isDynamic = false
+
+                        }
+                        
                         switch tileDef.name {
                             
                         case "Münze":
@@ -284,6 +288,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                             tileNode.physicsBody!.categoryBitMask = Bitmasks.terrainBitmask
                             
                         }
+                        
+                        
+                        
                         
                         levelNode.addChild(tileNode)
                         
@@ -392,13 +399,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                     invisibleUplayer = true
                     player.physicsBody?.affectedByGravity = false
                     //addInvisible(CGPoint(x: contactB.node!.position.x, y: contactB.node!.position.y - 10), PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 200, height: 20)))
-                    addInvisible(contactB.node!.position, PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 90, height: 10)))
+                    addInvisible(contactB.node!.position, PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 50, height: 10)))
                     
                     player.physicsBody?.affectedByGravity = true
                     
 
                 } else {
                     for i in self.allInvisible { i.removeFromParent() }
+                    allInvisible.removeAll()
                 }
                 
                 print(invisibleUplayer)
@@ -431,20 +439,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 
                 if player.position.y > contactB.node!.position.y  {
                     print("invisible entfernen")
-                    
-                    let _ = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { timer in
-                        if !self.invisibleUplayer {
-                            self.allInvisible[self.allInvisible.count - 1].removeFromParent()
-                        }
+                    /*
+                    if allInvisible.count > 8 {
+                        allInvisible.last?.removeFromParent()
+                        allInvisible.removeLast()
                     }
-                    if invisibleUplayer == true {
+                    /*if invisibleUplayer == true {
                         for i in self.allInvisible {
-                            let _ = Timer.scheduledTimer(withTimeInterval: 1, repeats: false) { timer in
+                            let _ = Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { timer in
                                 i.removeFromParent()
                             }
                         }
                         invisibleUplayer = false
-                    }
+                    }*/ */
                 }
                 
             default:
