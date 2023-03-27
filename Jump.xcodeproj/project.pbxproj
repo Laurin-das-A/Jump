@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8143A13129D18E9D0011C5B8 /* BallSound1.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 8143A13029D18E9D0011C5B8 /* BallSound1.mp3 */; };
+		814C8C5D29D1898D00F8A4C0 /* Souds in Resources */ = {isa = PBXBuildFile; fileRef = 814C8C5C29D1898D00F8A4C0 /* Souds */; };
 		8198B3B629C5B15E0051DE89 /* levelObjekte.sks in Resources */ = {isa = PBXBuildFile; fileRef = 8198B3B529C5B15E0051DE89 /* levelObjekte.sks */; };
 		81A5196429C6278B00EDC8E8 /* Feuerwerk.sks in Resources */ = {isa = PBXBuildFile; fileRef = 81A5196229C6278B00EDC8E8 /* Feuerwerk.sks */; };
 		81A5196829C632ED00EDC8E8 /* Feuerwerk2.sks in Resources */ = {isa = PBXBuildFile; fileRef = 81A5196629C632ED00EDC8E8 /* Feuerwerk2.sks */; };
@@ -25,6 +27,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		8143A13029D18E9D0011C5B8 /* BallSound1.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = BallSound1.mp3; path = Assets/BallSound1.mp3; sourceTree = SOURCE_ROOT; };
+		814C8C5C29D1898D00F8A4C0 /* Souds */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = folder; name = Souds; path = Jump/Levels/Souds; sourceTree = SOURCE_ROOT; };
 		8198B3B529C5B15E0051DE89 /* levelObjekte.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = levelObjekte.sks; sourceTree = "<group>"; };
 		81A5196229C6278B00EDC8E8 /* Feuerwerk.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = Feuerwerk.sks; sourceTree = "<group>"; };
 		81A5196629C632ED00EDC8E8 /* Feuerwerk2.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = Feuerwerk2.sks; sourceTree = "<group>"; };
@@ -57,6 +61,7 @@
 		81BD2B1229C5C8570014D6FA /* Levels */ = {
 			isa = PBXGroup;
 			children = (
+				814C8C5C29D1898D00F8A4C0 /* Souds */,
 				81D2725129BDC920004F081C /* AppDelegate.swift */,
 				81A5196229C6278B00EDC8E8 /* Feuerwerk.sks */,
 				81D2725329BDC920004F081C /* Level1.sks */,
@@ -96,6 +101,7 @@
 				81D2725E29BDC921004F081C /* Assets.xcassets */,
 				8198B3B529C5B15E0051DE89 /* levelObjekte.sks */,
 				81D2726029BDC921004F081C /* LaunchScreen.storyboard */,
+				8143A13029D18E9D0011C5B8 /* BallSound1.mp3 */,
 			);
 			path = Jump;
 			sourceTree = "<group>";
@@ -158,6 +164,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				814C8C5D29D1898D00F8A4C0 /* Souds in Resources */,
+				8143A13129D18E9D0011C5B8 /* BallSound1.mp3 in Resources */,
 				8198B3B629C5B15E0051DE89 /* levelObjekte.sks in Resources */,
 				81D2725D29BDC920004F081C /* Main.storyboard in Resources */,
 				81D2725429BDC920004F081C /* Level1.sks in Resources */,

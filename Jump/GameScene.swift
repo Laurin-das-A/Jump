@@ -12,7 +12,7 @@ import GameplayKit
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
     static let levelNames = ["Level1", "Level2", "Level3", "End"]
-    var level = 0
+    var level = 2
     
     let player = SKShapeNode(circleOfRadius: 16)
     let terrain = SKShapeNode(rectOf: CGSize(width: 300, height: 30 ))
@@ -42,7 +42,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var invisible: SKSpriteNode?
     var invisibleUplayer = false
-    var allInvisible: [SKNode] = []
+    var allInvisibleA: [SKNode] = []
+    var allInvisibleB: [SKNode] = []
+    var akktuellMPlatform: SKNode?
     
     
     class Bitmasks {
@@ -56,6 +58,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         static let BoosterU: UInt32 = 0b10000000
         static let allBoosters: UInt32 = BoosterL | BoosterR | BoosterU | BoosterD
         static let oneWayPlatform: UInt32 = 0b100000000
+        static let movingPlatform: UInt32 = 0b1000000000
+        
     }
     
     override func didMove(to view: SKView) {
@@ -75,8 +79,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func restartLevel() {
         let SceneHight = frame.height * sceneHightmultiply
         
-        print(level)
-        print(GameScene.levelNames.count)
+        
         if level < GameScene.levelNames.count {
             
             loadLevel(GameScene.levelNames[level])
@@ -158,7 +161,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         player.position = .init(x: 0, y: 500)
         player.physicsBody?.categoryBitMask = Bitmasks.playerBitmask
         player.physicsBody?.collisionBitMask = Bitmasks.terrainBitmask
-        player.physicsBody?.contactTestBitMask = Bitmasks.korbBitmask | Bitmasks.münzeBitmask | Bitmasks.allBoosters | Bitmasks.oneWayPlatform
+        player.physicsBody?.contactTestBitMask = Bitmasks.korbBitmask | Bitmasks.münzeBitmask | Bitmasks.allBoosters | Bitmasks.oneWayPlatform | Bitmasks.movingPlatform
         player.zPosition = 10
         
         addChild(player)
@@ -172,6 +175,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         bottomBorder.physicsBody?.isDynamic = false
         bottomBorder.position = .init(x: 0, y: -frame.height / 2)
         bottomBorder.physicsBody?.categoryBitMask = Bitmasks.terrainBitmask
+        bottomBorder.physicsBody?.contactTestBitMask = Bitmasks.terrainBitmask
         
         addChild(bottomBorder)
         
@@ -235,6 +239,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                             tileNode.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: tileTexture.size().width , height: tileTexture.size().height + 300))
                             tileNode.physicsBody!.affectedByGravity = false
                             tileNode.physicsBody!.isDynamic = false
+                        case "MovingPlatform":
+                            tileNode.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: tileTexture.size().width , height: tileTexture.size().height + 400))
+                            tileNode.physicsBody!.affectedByGravity = false
+                            tileNode.physicsBody!.isDynamic = false
                         default:
                             tileNode.physicsBody = SKPhysicsBody(rectangleOf: tileTexture.size())
                             tileNode.physicsBody!.affectedByGravity = false
@@ -265,7 +273,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                                                                    .move(by: CGVector(dx: 0, dy: 10), duration: 0.5) ])))
                             
                         case "MovingPlatform":
-                            tileNode.physicsBody?.categoryBitMask = Bitmasks.oneWayPlatform
+                            tileNode.physicsBody?.categoryBitMask = Bitmasks.movingPlatform
                             
                             // Berechnung, damit nicht alle gleich schnell laufen
                             
@@ -311,7 +319,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     
-    func addInvisible(_ pos: CGPoint, PhysicsBody: SKPhysicsBody) {
+    func addInvisible(_ pos: CGPoint, PhysicsBody: SKPhysicsBody, Array: String) {
         
         invisible = SKSpriteNode()
         invisible?.physicsBody = PhysicsBody
@@ -321,8 +329,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         invisible?.position = pos
         
         addChild(invisible!)
-        allInvisible.append(invisible!)
-        
+        if Array == "A" {
+            allInvisibleA.append(invisible!)
+        } else if Array == "B" {
+            allInvisibleB.append(invisible!)
+        }
     }
     
     func didBegin(_ contact: SKPhysicsContact) {
@@ -346,7 +357,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             case Bitmasks.korbBitmask:
                 
                 korb!.physicsBody!.categoryBitMask = 0
-                print("Kollision mit Korb")
+               
                 
                 player.removeFromParent()
                 
@@ -366,7 +377,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                     self.rightBorder.removeFromParent()
                     
                     if self.level < GameScene.levelNames.count - 1 {
-                        print("Level erhöhen")
+                        
                         self.level += 1
                     }
                     
@@ -395,21 +406,38 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 
             case Bitmasks.oneWayPlatform:
                 if player.position.y > contactB.node!.position.y  - 1 {
-                    print("abblbocken")
-                    invisibleUplayer = true
+                    //print("abblbocken")
+                    
                     player.physicsBody?.affectedByGravity = false
                     //addInvisible(CGPoint(x: contactB.node!.position.x, y: contactB.node!.position.y - 10), PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 200, height: 20)))
-                    addInvisible(contactB.node!.position, PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 50, height: 10)))
+                    addInvisible(contactB.node!.position, PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 50, height: 10)), Array: "A")
                     
                     player.physicsBody?.affectedByGravity = true
                     
 
                 } else {
-                    for i in self.allInvisible { i.removeFromParent() }
-                    allInvisible.removeAll()
+                    for i in self.allInvisibleA { i.removeFromParent() }
+                    allInvisibleA.removeAll()
                 }
                 
-                print(invisibleUplayer)
+            case Bitmasks.movingPlatform:
+                if player.position.y > contactB.node!.position.y  - 1 {
+                    //print("abblbocken")
+                    
+                    akktuellMPlatform = contactB.node
+                    //print(akktuellMPlatform)
+                    invisibleUplayer = true
+                    
+                    
+                    player.physicsBody?.affectedByGravity = false
+                    
+                    addInvisible(contactB.node!.position, PhysicsBody: SKPhysicsBody(rectangleOf: CGSize(width: 320, height: 10)), Array: "B")
+                    
+                    player.physicsBody?.affectedByGravity = true
+                } else {
+                    for i in allInvisibleB { i.removeFromParent() }
+                    allInvisibleB.removeAll()
+                }
             default:
                 print("Bestimmt war's wieder der Scheisskorb")
             }
@@ -435,25 +463,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             switch contactB.categoryBitMask{
                 
-            case Bitmasks.oneWayPlatform:
+            case Bitmasks.movingPlatform:
+                break
+                 /*print("end")
+                invisibleUplayer = false
                 
-                if player.position.y > contactB.node!.position.y  {
-                    print("invisible entfernen")
-                    /*
-                    if allInvisible.count > 8 {
-                        allInvisible.last?.removeFromParent()
-                        allInvisible.removeLast()
-                    }
-                    /*if invisibleUplayer == true {
-                        for i in self.allInvisible {
-                            let _ = Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { timer in
-                                i.removeFromParent()
-                            }
-                        }
-                        invisibleUplayer = false
-                    }*/ */
+                
+                for i in allInvisibleB {
+                    i.removeFromParent()
+
                 }
-                
+                allInvisibleB.removeAll()*/
             default:
                 return
             }
@@ -513,9 +533,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     override func update(_ currentTime: TimeInterval) {
         // Called before each frame is rendered
-        /*if invisibleUplayer {
-            invisible?.position.x = player.position.y
-        }*/
+        if invisibleUplayer {
+            for i in allInvisibleB {
+                
+                i.position.x = akktuellMPlatform!.position.x
+            }
+        }
         
         background.position.y = camera1!.position.y / -5
         
